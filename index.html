@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Roboto', Helvetica, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+        #game-container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: clamp(14px, 4vw, 16px);
+            width: 100%;
+            max-width: 400px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: clamp(14px, 4vw, 16px);
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            touch-action: manipulation;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #hint {
+            color: #555;
+            font-style: italic;
+            margin-top: 10px;
+            font-size: clamp(12px, 3.5vw, 14px);
+            user-select: none;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        #completion {
+            font-size: clamp(14px, 4vw, 18px);
+            font-weight: bold;
+            margin-top: 10px;
+            font-family: 'Roboto', Helvetica, sans-serif;
+        }
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @keyframes firework {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
+        }
+        @media (max-width: 600px) {
+            #game-container {
+                padding: 15px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: clamp(12px, 3.5vw, 14px);
+            }
+            input[type="text"] {
+                font-size: clamp(12px, 3.5vw, 14px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Spelling Game</h1>
+        <p>Click Start to begin the game!</p>
+        <button onclick="startGame()">Start</button>
+    </div>
+    <script>
+        const sentences = [
+            "I like apples.",
+            "These are grapes.",
+            "I eat an orange.",
+            "Fruit is good for you.",
+            "This is a pear.",
+            "I drink coconut water.",
+            "She has a lemon.",
+            "He eats a lime.",
+            "I love mangoes.",
+            "That is a pineapple.",
+            "We eat watermelon.",
+            "I eat rice every day.",
+            "This is my bread.",
+            "I like cake.",
+            "My lunch is a burger.",
+            "He eats chips.",
+            "I eat carrots.",
+            "She eats chocolate.",
+            "I like beans.",
+            "We have dinner at 7.",
+            "I eat an egg.",
+            "This is meat.",
+            "We eat fish.",
+            "I like sausages.",
+            "I eat onions.",
+            "This is a tomato.",
+            "I eat a potato.",
+            "We eat peas.",
+            "I drink milk.",
+            "She drinks water.",
+            "I like lemonade.",
+            "He eats ice cream.",
+            "I have breakfast at 7.",
+            "Lunch is at 12.",
+            "We have dinner at night."
+        ];
+
+        let currentSentenceIndex = 0;
+        let completedCount = 0;
+        let isPlaying = false;
+        let autoPlayInterval;
+        let wrongAttempts = 0;
+
+        function createFirework() {
+            let input = document.getElementById('userInput');
+            let gameContainer = document.getElementById('game-container');
+            let inputRect = input.getBoundingClientRect();
+            let containerRect = gameContainer.getBoundingClientRect();
+            let x = inputRect.left - containerRect.left + inputRect.width / 2;
+            let y = inputRect.top - containerRect.top + inputRect.height / 2;
+
+            for (let i = 0; i < 100; i++) {
+                let particle = document.createElement('div');
+                particle.className = 'particle';
+                let angle = Math.random() * 2 * Math.PI;
+                let distance = Math.random() * 150 + 50;
+                let tx = Math.cos(angle) * distance;
+                let ty = Math.sin(angle) * distance;
+                particle.style.backgroundColor = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.animation = `firework ${Math.random() * 0.5 + 0.5}s linear forwards`;
+                gameContainer.appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        function playSentence() {
+            if (!isPlaying) {
+                isPlaying = true;
+                let utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex]);
+                utterance.lang = 'en-US';
+                utterance.onend = () => {
+                    isPlaying = false;
+                };
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function startAutoPlay() {
+            if (autoPlayInterval) clearInterval(autoPlayInterval);
+            autoPlayInterval = setInterval(() => {
+                if (!isPlaying) {
+                    playSentence();
+                }
+            }, 3000);
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+            }
+        }
+
+        function checkAnswer() {
+            let userInput = document.getElementById('userInput').value.trim();
+            let result = document.getElementById('result');
+            if (userInput.toLowerCase() === sentences[currentSentenceIndex].toLowerCase()) {
+                stopAutoPlay();
+                result.textContent = "Correct!";
+                result.style.color = "green";
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(createFirework, i * 200);
+                }
+                wrongAttempts = 0;
+                setTimeout(() => {
+                    document.getElementById('userInput').value = '';
+                    document.getElementById('hint').textContent = '';
+                    result.textContent = '';
+                    currentSentenceIndex++;
+                    completedCount++;
+                    document.getElementById('completion').textContent = `Completed: ${completedCount}/35`;
+                    if (currentSentenceIndex >= sentences.length) {
+                        document.getElementById('game-container').innerHTML = `<h1>Congratulations! You have completed ${completedCount} sentences!</h1>`;
+                    } else {
+                        playSentence();
+                        startAutoPlay();
+                    }
+                }, 2000);
+            } else {
+                wrongAttempts++;
+                result.textContent = `Incorrect, try again! (${3 - wrongAttempts} attempts left)`;
+                result.style.color = "red";
+                if (wrongAttempts >= 3) {
+                    stopAutoPlay();
+                    wrongAttempts = 0;
+                    result.textContent = "Moving to next sentence...";
+                    setTimeout(() => {
+                        document.getElementById('userInput').value = '';
+                        document.getElementById('hint').textContent = '';
+                        result.textContent = '';
+                        currentSentenceIndex++;
+                        document.getElementById('completion').textContent = `Completed: ${completedCount}/35`;
+                        if (currentSentenceIndex >= sentences.length) {
+                            document.getElementById('game-container').innerHTML = `<h1>Congratulations! You have completed ${completedCount} sentences!</h1>`;
+                        } else {
+                            playSentence();
+                            startAutoPlay();
+                        }
+                    }, 1000);
+                }
+            }
+        }
+
+        function showHint() {
+            let hintText = sentences[currentSentenceIndex];
+            document.getElementById('hint').textContent = `Hint: ${hintText}`;
+        }
+
+        function clearHint() {
+            document.getElementById('hint').textContent = '';
+        }
+
+        function startGame() {
+            wrongAttempts = 0;
+            document.getElementById('game-container').innerHTML = `
+                <h1>Spelling Game</h1>
+                <p>Listen and type the sentence you hear:</p>
+                <input type="text" id="userInput" placeholder="Type the sentence here">
+                <br>
+                <button onclick="playSentence()">Play Sentence</button>
+                <button onclick="checkAnswer()">Check Answer</button>
+                <button onclick="showHint()">Hint</button>
+                <button onclick="resetGame()">Reset Game</button>
+                <p id="completion">Completed: 0/35</p>
+                <p id="hint"></p>
+                <p id="result"></p>
+            `;
+            document.getElementById('userInput').addEventListener('focus', clearHint);
+            document.getElementById('userInput').addEventListener('keypress', handleKeyPress);
+            document.getElementById('hint').addEventListener('copy', (e) => e.preventDefault());
+            playSentence();
+            startAutoPlay();
+        }
+
+        function resetGame() {
+            stopAutoPlay();
+            currentSentenceIndex = 0;
+            completedCount = 0;
+            wrongAttempts = 0;
+            document.getElementById('game-container').innerHTML = `
+                <h1>Spelling Game</h1>
+                <p>Click Start to begin the game!</p>
+                <button onclick="startGame()">Start</button>
+            `;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                checkAnswer();
+            }
+        }
+    </script>
+</body>
+</html>
